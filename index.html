@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catan Turn Timer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- HEX BACKGROUND -->
+  <div class="hex-bg" aria-hidden="true"></div>
+
+  <!-- SETUP SCREEN -->
+  <section id="setup-screen" class="screen active">
+    <div class="panel setup-panel">
+      <h1 class="title">
+        <span class="title-catan">Catan</span>
+        <span class="title-sub">Turn Timer</span>
+      </h1>
+
+      <div class="field-group">
+        <label class="field-label">Turn Time</label>
+        <div class="time-options">
+          <button class="time-btn active" data-seconds="30">30s</button>
+          <button class="time-btn" data-seconds="60">1 min</button>
+          <button class="time-btn" data-seconds="90">90s</button>
+          <button class="time-btn" data-seconds="120">2 min</button>
+          <button class="time-btn" data-seconds="0">Custom</button>
+        </div>
+        <div id="custom-time-row" class="custom-time-row hidden">
+          <input id="custom-minutes" type="number" min="0" max="59" value="1" class="custom-input" />
+          <span class="time-sep">m</span>
+          <input id="custom-seconds" type="number" min="0" max="59" value="30" class="custom-input" />
+          <span class="time-sep">s</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label toggle-label">
+          <span>5–6 Player Mode</span>
+          <span class="toggle-hint">(adds build phase between turns)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="five-player-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </label>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Players <span class="player-hint">(drag or use arrows to reorder)</span></label>
+        <ul id="player-list" class="player-list"></ul>
+        <button id="add-player-btn" class="btn btn-secondary" onclick="addPlayer()">+ Add Player</button>
+      </div>
+
+      <button id="start-game-btn" class="btn btn-primary" onclick="startGame()">Start Game</button>
+      <div id="setup-error" class="error-msg hidden"></div>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game-screen" class="screen">
+
+    <!-- Turn Phase -->
+    <div id="turn-phase" class="game-panel">
+      <div class="turn-header">
+        <div id="turn-number" class="turn-number">Turn 1</div>
+        <button class="btn btn-ghost back-btn" onclick="backToSetup()">← Setup</button>
+      </div>
+
+      <div id="current-player-name" class="current-player">Player</div>
+      <div id="player-role" class="player-role">Your turn</div>
+
+      <div id="timer-display" class="timer-display">—:——</div>
+
+      <div id="turn-controls" class="turn-controls">
+        <button id="start-turn-btn" class="btn btn-start" onclick="startTurn()">Start Turn</button>
+        <button id="end-turn-btn" class="btn btn-end hidden" onclick="endTurn()">End Turn</button>
+      </div>
+
+      <div class="side-panel">
+        <div class="side-title">Turn Order</div>
+        <ul id="turn-order-list" class="turn-order-list"></ul>
+      </div>
+    </div>
+
+    <!-- Build Phase -->
+    <div id="build-phase" class="game-panel hidden">
+      <div class="turn-header">
+        <div class="build-label">Build Phase</div>
+      </div>
+
+      <div id="build-player-name" class="current-player build-player">Player</div>
+      <div class="player-role">Build now — no time limit</div>
+
+      <div class="build-icon">🏗️</div>
+
+      <button id="done-building-btn" class="btn btn-build" onclick="doneBuilding()">Done Building</button>
+
+      <div class="build-progress-wrap">
+        <div class="side-title">Build Order</div>
+        <ul id="build-order-list" class="turn-order-list"></ul>
+      </div>
+    </div>
+
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
