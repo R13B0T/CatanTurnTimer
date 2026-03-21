@@ -433,7 +433,7 @@ html, body {
 .timer-display {
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  font-size: clamp(5rem, 20vw, 8rem);
+  font-size: clamp(6.25rem, 25vw, 10rem);
   color: var(--sand-lt);
   text-shadow: 0 4px 20px rgba(0,0,0,0.6);
   line-height: 1;
@@ -444,6 +444,7 @@ html, body {
 }
 .timer-display.warning { color: #E8B84B; }
 .timer-display.danger  { color: var(--brick); animation: pulse 0.6s ease-in-out infinite alternate; }
+.timer-display.paused  { color: var(--ore); opacity: 0.6; }
 
 @keyframes pulse {
   from { text-shadow: 0 4px 20px rgba(0,0,0,0.6); }
@@ -458,11 +459,40 @@ html, body {
   gap: 14px;
   margin-top: 8px;
 }
+.active-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.timer-actions {
+  display: flex;
+  gap: 10px;
+}
+.btn-action {
+  padding: 10px 18px;
+  font-size: 0.8rem;
+  background: rgba(255,248,236,0.1);
+  color: var(--sand-lt);
+  border: 1.5px solid rgba(237,213,163,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 8px;
+}
+.btn-action:hover { background: rgba(255,248,236,0.22); }
+.btn-action#pause-btn { min-width: 80px; }
 
 /* ===== BUILD ICON ===== */
 .build-icon {
   font-size: 4rem;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+}
+.build-message {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  color: var(--sand);
+  letter-spacing: 0.08em;
+  text-align: center;
 }
 
 /* ===== SIDE / TURN ORDER ===== */
@@ -485,6 +515,15 @@ html, body {
   margin-bottom: 8px;
   text-align: center;
 }
+.choose-hint {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-lt);
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.7;
+}
 .turn-order-list {
   list-style: none;
   display: flex;
@@ -502,7 +541,9 @@ html, body {
   font-size: 0.9rem;
   color: var(--sand);
   transition: background 0.2s, border-color 0.2s;
+  cursor: pointer;
 }
+.turn-order-item:hover { background: rgba(255,248,236,0.14); border-color: rgba(237,213,163,0.3); }
 .turn-order-item.is-active {
   background: rgba(200,146,42,0.18);
   border-color: var(--gold);

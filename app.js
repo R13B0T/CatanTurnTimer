@@ -10,9 +10,9 @@ let state = {
   currentPlayerIndex: 0,
   turnNumber: 1,
   phase: 'idle',       // 'idle' | 'turn' | 'build'
-  buildQueue: [],      // player indices still to build
   timer: null,
   timeRemaining: 0,
+  paused: false,
   dragSrcIndex: null,
 };
 
@@ -234,6 +234,7 @@ function startGame() {
 function backToSetup() {
   clearTimer();
   state.phase = 'idle';
+  state.paused = false;
   showScreen('setup-screen');
 }
 
@@ -241,9 +242,14 @@ function backToSetup() {
 function startTurn() {
   if (state.phase !== 'idle') return;
   state.phase = 'turn';
+  state.paused = false;
   state.timeRemaining = state.turnDuration;
   renderGame();
+  runTimer();
+}
 
+function runTimer() {
+  clearTimer();
   state.timer = setInterval(() => {
     state.timeRemaining--;
     renderTimerDisplay();
@@ -256,8 +262,43 @@ function startTurn() {
   }, 1000);
 }
 
+function pauseTurn() {
+  if (state.phase !== 'turn') return;
+  state.paused = !state.paused;
+  if (state.paused) {
+    clearTimer();
+  } else {
+    runTimer();
+  }
+  renderTurnControls();
+  renderTimerDisplay();
+}
+
+function addTime(secs) {
+  if (state.phase !== 'turn') return;
+  state.timeRemaining += secs;
+  renderTimerDisplay();
+}
+
+function resetTimer() {
+  state.timeRemaining = state.turnDuration;
+  renderTimerDisplay();
+}
+
+function selectPlayer(idx) {
+  clearTimer();
+  state.currentPlayerIndex = idx;
+  state.phase = 'idle';
+  state.paused = false;
+  state.timeRemaining = state.turnDuration;
+  showPhase('turn');
+  renderGame();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function endTurn() {
   clearTimer();
+  state.paused = false;
   if (state.fivePlayerMode) {
     startBuildPhase();
   } else {
@@ -266,37 +307,24 @@ function endTurn() {
 }
 
 function startBuildPhase() {
-  // Build queue: ALL players in turn order starting from the next player,
-  // wrapping around to include the current player last.
-  const n = state.players.length;
-  state.buildQueue = [];
-  for (let i = 1; i <= n; i++) {
-    state.buildQueue.push((state.currentPlayerIndex + i) % n);
-  }
   state.phase = 'build';
   showPhase('build');
-  renderBuildPhase();
 }
 
 function doneBuilding() {
   beepDoneBuilding();
-  state.buildQueue.shift();
-  if (state.buildQueue.length === 0) {
-    nextPlayer();
-  } else {
-    renderBuildPhase();
-  }
+  nextPlayer();
 }
 
 function nextPlayer() {
   state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
   if (state.currentPlayerIndex === 0) state.turnNumber++;
   state.phase = 'idle';
+  state.paused = false;
   state.timeRemaining = state.turnDuration;
   showPhase('turn');
   renderGame();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  // Flash to signal the new turn
   const panel = document.getElementById('turn-phase');
   panel.classList.add('new-turn-flash');
   setTimeout(() => panel.classList.remove('new-turn-flash'), 700);
@@ -320,19 +348,19 @@ function renderTimerDisplay() {
     el.className = 'timer-display';
   } else if (state.phase === 'turn') {
     el.textContent = formatTime(t);
-    el.className = 'timer-display' + (t <= 10 ? ' danger' : t <= 20 ? ' warning' : '');
+    if (state.paused)   el.className = 'timer-display paused';
+    else if (t <= 10)   el.className = 'timer-display danger';
+    else if (t <= 20)   el.className = 'timer-display warning';
+    else                el.className = 'timer-display';
   }
 }
 
 function renderTurnControls() {
-  const startBtn = document.getElementById('start-turn-btn');
-  const endBtn   = document.getElementById('end-turn-btn');
-  if (state.phase === 'idle') {
-    startBtn.classList.remove('hidden');
-    endBtn.classList.add('hidden');
-  } else {
-    startBtn.classList.add('hidden');
-    endBtn.classList.remove('hidden');
+  const isActive = state.phase === 'turn';
+  document.getElementById('start-turn-btn').classList.toggle('hidden', isActive);
+  document.getElementById('active-controls').classList.toggle('hidden', !isActive);
+  if (isActive) {
+    document.getElementById('pause-btn').textContent = state.paused ? 'Resume' : 'Pause';
   }
 }
 
@@ -347,39 +375,11 @@ function renderTurnOrderList() {
       <span class="order-dot" style="background:${p.color}"></span>
       <span>${escHtml(p.name)}</span>
     `;
+    li.addEventListener('click', () => selectPlayer(i));
     ul.appendChild(li);
   });
 }
 
-function renderBuildPhase() {
-  const buildingPlayerIdx = state.buildQueue[0];
-  const player = state.players[buildingPlayerIdx];
-  document.getElementById('build-player-name').textContent = player.name;
-
-  // Build all n players in the queue (everyone)
-  const n = state.players.length;
-  // Full original queue order: next player through and including current player
-  const fullQueue = [];
-  for (let i = 1; i <= n; i++) {
-    fullQueue.push((state.currentPlayerIndex + i) % n);
-  }
-
-  const ul = document.getElementById('build-order-list');
-  ul.innerHTML = '';
-  fullQueue.forEach(idx => {
-    const p = state.players[idx];
-    const isDone = !state.buildQueue.includes(idx);
-    const isNow  = idx === buildingPlayerIdx;
-    const li = document.createElement('li');
-    li.className = 'turn-order-item' + (isNow ? ' is-active' : '') + (isDone ? ' is-done' : '');
-    li.innerHTML = `
-      <span class="order-dot" style="background:${p.color}"></span>
-      <span>${escHtml(p.name)}</span>
-      ${isDone ? '<span style="margin-left:auto;font-size:0.8rem;color:var(--sheep)">✓</span>' : ''}
-    `;
-    ul.appendChild(li);
-  });
-}
 
 // ===== UTILITIES =====
 function formatTime(secs) {
