@@ -1,49 +1,58 @@
-// ===== PLAYER COLORS (Catan-themed) =====
+// ===== PLAYER COLORS (Catan-themed defaults) =====
 const PLAYER_COLORS = ['#C0392B', '#2E86C1', '#229954', '#F39C12', '#8E44AD', '#1ABC9C'];
 const PLAYER_NAMES  = ['Red', 'Blue', 'Green', 'Orange', 'Purple', 'Teal'];
 
 // ===== STATE =====
 let state = {
   players: [],
-  turnDuration: 30,      // seconds
+  turnDuration: 30,
   fivePlayerMode: false,
   currentPlayerIndex: 0,
   turnNumber: 1,
-  phase: 'idle',         // 'idle' | 'turn' | 'build'
-  buildQueue: [],        // player indices who still need to build
+  phase: 'idle',       // 'idle' | 'turn' | 'build'
+  buildQueue: [],      // player indices still to build
   timer: null,
   timeRemaining: 0,
   dragSrcIndex: null,
 };
 
-// ===== AUDIO (Web Audio API beeps) =====
+// ===== AUDIO =====
 let audioCtx = null;
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Resume if suspended (browser autoplay policy)
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
-function beep(freq = 440, duration = 0.15, gain = 0.4) {
+function beep(freq, duration, gain, type = 'sine') {
   try {
     const ctx = getAudioCtx();
     const osc = ctx.createOscillator();
     const g   = ctx.createGain();
-    osc.connect(g); g.connect(ctx.destination);
-    osc.type = 'sine';
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.type = type;
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
     g.gain.setValueAtTime(gain, ctx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + duration);
-  } catch(e) { /* audio not supported */ }
+  } catch (e) { /* audio not supported */ }
 }
 function beepEndOfTurn() {
-  beep(880, 0.15, 0.5);
-  setTimeout(() => beep(660, 0.2, 0.5), 200);
-  setTimeout(() => beep(440, 0.4, 0.6), 420);
+  // Three-tone descending alert — loud and distinct
+  beep(880, 0.18, 0.7);
+  setTimeout(() => beep(660, 0.18, 0.7), 220);
+  setTimeout(() => beep(440, 0.5,  0.8), 440);
 }
 function beepWarning() {
-  beep(660, 0.1, 0.3);
+  beep(700, 0.08, 0.25);
 }
+function beepDoneBuilding() {
+  beep(550, 0.12, 0.3);
+}
+// Warm up audio context on first user interaction so end-of-turn beep always works
+document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
 
 // ===== SETUP: TIME SELECTION =====
 document.querySelectorAll('.time-btn').forEach(btn => {
@@ -78,9 +87,11 @@ function addPlayer() {
   if (state.players.length >= 6) return;
   const idx = state.players.length;
   const id  = Date.now() + Math.random();
-  state.players.push({ id, name: '', color: PLAYER_COLORS[idx] });
+  // Assign a default color not already in use
+  const usedColors = new Set(state.players.map(p => p.color));
+  const color = PLAYER_COLORS.find(c => !usedColors.has(c)) || PLAYER_COLORS[idx % PLAYER_COLORS.length];
+  state.players.push({ id, name: '', color });
   renderPlayerList();
-  // focus new input
   setTimeout(() => {
     const inputs = document.querySelectorAll('.player-name-input');
     if (inputs.length) inputs[inputs.length - 1].focus();
@@ -89,20 +100,22 @@ function addPlayer() {
 
 function removePlayer(id) {
   state.players = state.players.filter(p => p.id !== id);
-  // re-assign colors by position
-  state.players.forEach((p, i) => { p.color = PLAYER_COLORS[i]; });
+  // Do NOT reassign colors — keep each player's chosen color
   renderPlayerList();
 }
 
 function movePlayer(index, dir) {
   const newIdx = index + dir;
   if (newIdx < 0 || newIdx >= state.players.length) return;
-  const tmp = state.players[index];
-  state.players[index] = state.players[newIdx];
-  state.players[newIdx] = tmp;
-  // re-assign colors
-  state.players.forEach((p, i) => { p.color = PLAYER_COLORS[i]; });
+  [state.players[index], state.players[newIdx]] = [state.players[newIdx], state.players[index]];
+  // Do NOT reassign colors on reorder
   renderPlayerList();
+}
+
+function updatePlayerColor(id, color) {
+  const p = state.players.find(p => p.id == id);
+  if (p) p.color = color;
+  // update the dot on the color input itself (handled by value binding)
 }
 
 function renderPlayerList() {
@@ -116,7 +129,7 @@ function renderPlayerList() {
 
     li.innerHTML = `
       <span class="drag-handle" title="Drag to reorder">⠿</span>
-      <span class="player-color-dot" style="background:${player.color}"></span>
+      <input class="color-picker" type="color" value="${player.color}" data-id="${player.id}" title="Pick colour" />
       <input class="player-name-input" type="text" placeholder="${PLAYER_NAMES[i]}" maxlength="20" value="${escHtml(player.name)}" data-id="${player.id}" />
       <div class="order-btns">
         <button class="order-btn" onclick="movePlayer(${i}, -1)" title="Move up">▲</button>
@@ -125,28 +138,55 @@ function renderPlayerList() {
       <button class="remove-btn" onclick="removePlayer(${player.id})" title="Remove">✕</button>
     `;
 
-    // Sync name input
+    // Sync name
     li.querySelector('.player-name-input').addEventListener('input', e => {
       const p = state.players.find(p => p.id == e.target.dataset.id);
       if (p) p.name = e.target.value;
     });
 
-    // Drag-and-drop
+    // Sync color — prevent drag from firing on color input click
+    const colorInput = li.querySelector('.color-picker');
+    colorInput.addEventListener('input', e => updatePlayerColor(e.target.dataset.id, e.target.value));
+    colorInput.addEventListener('mousedown', e => e.stopPropagation());
+    colorInput.addEventListener('touchstart', e => e.stopPropagation());
+
+    // ===== DRAG AND DROP =====
     li.addEventListener('dragstart', e => {
-      state.dragSrcIndex = i;
+      // Must set data for Firefox compatibility
+      e.dataTransfer.setData('text/plain', String(i));
       e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => li.style.opacity = '0.4', 0);
+      state.dragSrcIndex = i;
+      // Delay opacity so ghost image captures full opacity
+      requestAnimationFrame(() => li.classList.add('dragging'));
     });
-    li.addEventListener('dragend', () => { li.style.opacity = ''; });
-    li.addEventListener('dragover', e => { e.preventDefault(); li.classList.add('drag-over'); });
-    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+
+    li.addEventListener('dragend', () => {
+      li.classList.remove('dragging');
+      // Clean up any lingering drag-over highlights
+      document.querySelectorAll('.player-item').forEach(el => el.classList.remove('drag-over'));
+    });
+
+    li.addEventListener('dragenter', e => {
+      e.preventDefault();
+      if (state.dragSrcIndex !== null && state.dragSrcIndex !== i) {
+        li.classList.add('drag-over');
+      }
+    });
+
+    // dragover must be prevented to allow drop
+    li.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+
+    // Only remove highlight when actually leaving the li (not just entering a child)
+    li.addEventListener('dragleave', e => {
+      if (!li.contains(e.relatedTarget)) li.classList.remove('drag-over');
+    });
+
     li.addEventListener('drop', e => {
       e.preventDefault();
       li.classList.remove('drag-over');
       if (state.dragSrcIndex === null || state.dragSrcIndex === i) return;
       const moved = state.players.splice(state.dragSrcIndex, 1)[0];
       state.players.splice(i, 0, moved);
-      state.players.forEach((p, idx) => { p.color = PLAYER_COLORS[idx]; });
       state.dragSrcIndex = null;
       renderPlayerList();
     });
@@ -161,7 +201,7 @@ addPlayer();
 
 // ===== START GAME =====
 function startGame() {
-  // Collect player names from inputs
+  // Collect current input values
   document.querySelectorAll('.player-name-input').forEach((input, i) => {
     if (state.players[i]) {
       state.players[i].name = input.value.trim() || PLAYER_NAMES[i];
@@ -218,7 +258,7 @@ function startTurn() {
 
 function endTurn() {
   clearTimer();
-  if (state.fivePlayerMode && state.players.length >= 2) {
+  if (state.fivePlayerMode) {
     startBuildPhase();
   } else {
     nextPlayer();
@@ -226,10 +266,11 @@ function endTurn() {
 }
 
 function startBuildPhase() {
-  // Build queue: all OTHER players in turn order starting after current
-  state.buildQueue = [];
+  // Build queue: ALL players in turn order starting from the next player,
+  // wrapping around to include the current player last.
   const n = state.players.length;
-  for (let i = 1; i < n; i++) {
+  state.buildQueue = [];
+  for (let i = 1; i <= n; i++) {
     state.buildQueue.push((state.currentPlayerIndex + i) % n);
   }
   state.phase = 'build';
@@ -238,7 +279,7 @@ function startBuildPhase() {
 }
 
 function doneBuilding() {
-  beep(550, 0.12, 0.3);
+  beepDoneBuilding();
   state.buildQueue.shift();
   if (state.buildQueue.length === 0) {
     nextPlayer();
@@ -259,11 +300,8 @@ function nextPlayer() {
 // ===== RENDER =====
 function renderGame() {
   const player = state.players[state.currentPlayerIndex];
-
   document.getElementById('turn-number').textContent = `Turn ${state.turnNumber}`;
   document.getElementById('current-player-name').textContent = player.name;
-  document.getElementById('player-role').textContent = 'Your turn';
-
   renderTimerDisplay();
   renderTurnControls();
   renderTurnOrderList();
@@ -313,13 +351,18 @@ function renderBuildPhase() {
   const player = state.players[buildingPlayerIdx];
   document.getElementById('build-player-name').textContent = player.name;
 
+  // Build all n players in the queue (everyone)
+  const n = state.players.length;
+  // Full original queue order: next player through and including current player
+  const fullQueue = [];
+  for (let i = 1; i <= n; i++) {
+    fullQueue.push((state.currentPlayerIndex + i) % n);
+  }
+
   const ul = document.getElementById('build-order-list');
   ul.innerHTML = '';
-  // Show all non-active players in build queue order
-  const n = state.players.length;
-  for (let i = 1; i < n; i++) {
-    const idx = (state.currentPlayerIndex + i) % n;
-    const p   = state.players[idx];
+  fullQueue.forEach(idx => {
+    const p = state.players[idx];
     const isDone = !state.buildQueue.includes(idx);
     const isNow  = idx === buildingPlayerIdx;
     const li = document.createElement('li');
@@ -327,10 +370,10 @@ function renderBuildPhase() {
     li.innerHTML = `
       <span class="order-dot" style="background:${p.color}"></span>
       <span>${escHtml(p.name)}</span>
-      ${isDone ? '<span style="margin-left:auto;font-size:0.8rem">✓</span>' : ''}
+      ${isDone ? '<span style="margin-left:auto;font-size:0.8rem;color:var(--sheep)">✓</span>' : ''}
     `;
     ul.appendChild(li);
-  }
+  });
 }
 
 // ===== UTILITIES =====

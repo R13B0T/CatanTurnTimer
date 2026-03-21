@@ -224,6 +224,7 @@ html, body {
 }
 .player-item:active { cursor: grabbing; }
 .player-item.drag-over { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,146,42,0.3); }
+.player-item.dragging { opacity: 0.4; }
 
 .drag-handle {
   color: var(--sand);
@@ -231,12 +232,23 @@ html, body {
   cursor: grab;
   flex-shrink: 0;
 }
-.player-color-dot {
-  width: 14px; height: 14px;
+/* Color picker swatch */
+.color-picker {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(0,0,0,0.15);
   border-radius: 50%;
+  cursor: pointer;
   flex-shrink: 0;
-  border: 1px solid rgba(0,0,0,0.2);
+  padding: 0;
+  background: none;
+  overflow: hidden;
 }
+.color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+.color-picker::-webkit-color-swatch { border: none; border-radius: 50%; }
+.color-picker::-moz-color-swatch { border: none; border-radius: 50%; }
 .player-name-input {
   flex: 1;
   border: none;
