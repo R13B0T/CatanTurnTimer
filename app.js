@@ -295,6 +295,11 @@ function nextPlayer() {
   state.timeRemaining = state.turnDuration;
   showPhase('turn');
   renderGame();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Flash to signal the new turn
+  const panel = document.getElementById('turn-phase');
+  panel.classList.add('new-turn-flash');
+  setTimeout(() => panel.classList.remove('new-turn-flash'), 700);
 }
 
 // ===== RENDER =====

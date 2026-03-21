@@ -528,6 +528,12 @@ html, body {
 /* ===== UTILITIES ===== */
 .hidden { display: none !important; }
 
+@keyframes newTurnFlash {
+  0%   { background: rgba(200,146,42,0.25); }
+  100% { background: transparent; }
+}
+.new-turn-flash { animation: newTurnFlash 0.7s ease-out; }
+
 /* ===== RESPONSIVE ===== */
 @media (min-width: 600px) {
   .panel, .setup-panel { padding: 40px 36px; }
