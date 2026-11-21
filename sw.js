@@ -1,4 +1,4 @@
-const CACHE = 'catan-timer-v1';
+const CACHE = 'catan-timer-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,8 @@ const ASSETS = [
   './app.js',
   './icon.svg',
   './manifest.json',
+  './audio/ten-seconds.mp3',
+  './audio/turn-ended.mp3',
 ];
 
 // Install: cache all app files

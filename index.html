@@ -82,20 +82,22 @@
         <button class="btn btn-ghost back-btn" onclick="backToSetup()">← Setup</button>
       </div>
 
-      <div id="current-player-name" class="current-player">Player</div>
-      <div id="player-role" class="player-role">Your turn</div>
+      <div class="timer-area">
+        <div id="current-player-name" class="current-player">Player</div>
+        <div id="player-role" class="player-role">Your turn</div>
 
-      <div id="timer-display" class="timer-display">—:——</div>
+        <div id="timer-display" class="timer-display">—:——</div>
 
-      <div id="turn-controls" class="turn-controls">
-        <button id="start-turn-btn" class="btn btn-start" onclick="startTurn()">Start Turn</button>
-        <div id="active-controls" class="active-controls hidden">
-          <div class="timer-actions">
-            <button id="pause-btn"    class="btn btn-action" onclick="pauseTurn()">Pause</button>
-            <button id="add-time-btn" class="btn btn-action" onclick="addTime(10)">+10s</button>
-            <button id="reset-btn"    class="btn btn-action" onclick="resetTimer()">Reset</button>
+        <div id="turn-controls" class="turn-controls">
+          <button id="start-turn-btn" class="btn btn-start" onclick="startTurn()">Start Turn</button>
+          <div id="active-controls" class="active-controls hidden">
+            <div class="timer-actions">
+              <button id="pause-btn"    class="btn btn-action" onclick="pauseTurn()">Pause</button>
+              <button id="add-time-btn" class="btn btn-action" onclick="addTime(10)">+10s</button>
+              <button id="reset-btn"    class="btn btn-action" onclick="resetTimer()">Reset</button>
+            </div>
+            <button id="end-turn-btn" class="btn btn-end" onclick="endTurn()">End Turn</button>
           </div>
-          <button id="end-turn-btn" class="btn btn-end" onclick="endTurn()">End Turn</button>
         </div>
       </div>
 

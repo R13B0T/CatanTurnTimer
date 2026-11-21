@@ -580,3 +580,117 @@ html, body {
   .panel, .setup-panel { padding: 40px 36px; }
   .game-panel { padding: 32px 28px 40px; }
 }
+
+#game-screen {
+  min-height: 100dvh;
+  padding: clamp(12px, 3vw, 48px);
+}
+
+#turn-phase {
+  flex: 1;
+  max-width: none;
+  padding: 0;
+  gap: clamp(16px, 3vw, 40px);
+}
+
+#turn-phase .back-btn {
+  min-height: 44px;
+  padding-inline: 16px;
+}
+
+.timer-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2dvh, 20px);
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.timer-area .current-player {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.timer-area .timer-display {
+  font-size: clamp(3rem, min(29cqi, 30dvh), 25rem);
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#turn-phase .turn-controls,
+#turn-phase .active-controls {
+  width: 100%;
+  max-width: 48rem;
+}
+
+#turn-phase .timer-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(6px, 1.2vw, 16px);
+  width: 100%;
+}
+
+#turn-phase .turn-controls .btn {
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(54px, 8dvh, 96px);
+  padding: 8px 4px;
+  font-size: clamp(0.95rem, 2vw, 1.75rem);
+  letter-spacing: 0.04em;
+}
+
+#turn-phase .side-panel {
+  max-width: none;
+  margin-top: 0;
+}
+
+#turn-phase .side-title {
+  color: var(--sand-lt);
+  font-size: clamp(0.9rem, 1.5vw, 1.25rem);
+}
+
+#turn-phase .choose-hint {
+  color: var(--sand-lt);
+}
+
+#turn-phase .turn-order-item {
+  min-height: clamp(44px, 7dvh, 76px);
+  font-size: clamp(1rem, 1.8vw, 1.5rem);
+  overflow-wrap: anywhere;
+}
+
+#turn-phase .turn-order-item > :last-child {
+  min-width: 0;
+}
+
+@media (min-width: 700px), (orientation: landscape) and (min-width: 560px) {
+  #turn-phase {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    align-items: center;
+  }
+
+  #turn-phase .turn-header {
+    grid-column: 1 / -1;
+  }
+
+  #turn-phase .side-title {
+    text-align: left;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+  #turn-phase {
+    gap: 12px 24px;
+  }
+
+  #turn-phase .turn-order-item {
+    min-height: 38px;
+    padding-block: 4px;
+  }
+}

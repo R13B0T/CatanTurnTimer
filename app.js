@@ -20,8 +20,6 @@ let state = {
 let audioCtx = null;
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  // Resume if suspended (browser autoplay policy)
-  if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 function beep(freq, duration, gain, type = 'sine') {
@@ -39,20 +37,40 @@ function beep(freq, duration, gain, type = 'sine') {
     osc.stop(ctx.currentTime + duration);
   } catch (e) { /* audio not supported */ }
 }
-function beepEndOfTurn() {
-  // Three-tone descending alert — loud and distinct
-  beep(880, 0.18, 0.7);
-  setTimeout(() => beep(660, 0.18, 0.7), 220);
-  setTimeout(() => beep(440, 0.5,  0.8), 440);
+const warningSound = loadSound('ten-seconds');
+const endSound = loadSound('turn-ended');
+
+async function loadSound(name) {
+  try {
+    const response = await fetch(`audio/${name}.mp3`);
+    if (response.ok) return await getAudioCtx().decodeAudioData(await response.arrayBuffer());
+  } catch {
+    // The timer remains usable if audio is unavailable.
+  }
 }
-function beepWarning() {
-  beep(700, 0.08, 0.25);
+
+function unlockAudio() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  } catch {
+    // Web Audio may be unavailable.
+  }
 }
+
+async function playSound(sound) {
+  const buffer = await sound;
+  if (!buffer || audioCtx.state !== 'running') return;
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioCtx.destination);
+  source.start();
+}
+
 function beepDoneBuilding() {
+  unlockAudio();
   beep(550, 0.12, 0.3);
 }
-// Warm up audio context on first user interaction so end-of-turn beep always works
-document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
 
 // ===== SETUP: TIME SELECTION =====
 document.querySelectorAll('.time-btn').forEach(btn => {
@@ -241,11 +259,13 @@ function backToSetup() {
 // ===== GAME LOGIC =====
 function startTurn() {
   if (state.phase !== 'idle') return;
+  unlockAudio();
   state.phase = 'turn';
   state.paused = false;
   state.timeRemaining = state.turnDuration;
   renderGame();
   runTimer();
+  if (state.timeRemaining === 10) playSound(warningSound);
 }
 
 function runTimer() {
@@ -253,12 +273,8 @@ function runTimer() {
   state.timer = setInterval(() => {
     state.timeRemaining--;
     renderTimerDisplay();
-    if (state.timeRemaining <= 10 && state.timeRemaining > 0) beepWarning();
-    if (state.timeRemaining <= 0) {
-      clearTimer();
-      beepEndOfTurn();
-      endTurn();
-    }
+    if (state.timeRemaining === 10) playSound(warningSound);
+    if (state.timeRemaining <= 0) endTurn();
   }, 1000);
 }
 
@@ -268,6 +284,7 @@ function pauseTurn() {
   if (state.paused) {
     clearTimer();
   } else {
+    unlockAudio();
     runTimer();
   }
   renderTurnControls();
@@ -297,7 +314,9 @@ function selectPlayer(idx) {
 }
 
 function endTurn() {
+  if (state.phase !== 'turn') return;
   clearTimer();
+  playSound(endSound);
   state.paused = false;
   if (state.fivePlayerMode) {
     startBuildPhase();
