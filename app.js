@@ -274,7 +274,10 @@ function runTimer() {
     state.timeRemaining--;
     renderTimerDisplay();
     if (state.timeRemaining === 10) playSound(warningSound);
-    if (state.timeRemaining <= 0) endTurn();
+    if (state.timeRemaining <= 0) {
+      playSound(endSound);
+      endTurn();
+    }
   }, 1000);
 }
 
@@ -316,7 +319,6 @@ function selectPlayer(idx) {
 function endTurn() {
   if (state.phase !== 'turn') return;
   clearTimer();
-  playSound(endSound);
   state.paused = false;
   if (state.fivePlayerMode) {
     startBuildPhase();

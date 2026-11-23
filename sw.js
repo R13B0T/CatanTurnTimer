@@ -1,4 +1,4 @@
-const CACHE = 'catan-timer-v2';
+const CACHE = 'catan-timer-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,7 @@ const ASSETS = [
 // Install: cache all app files
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE).then(cache => cache.addAll(ASSETS.map(path => new Request(path, { cache: 'reload' }))))
   );
   self.skipWaiting();
 });
